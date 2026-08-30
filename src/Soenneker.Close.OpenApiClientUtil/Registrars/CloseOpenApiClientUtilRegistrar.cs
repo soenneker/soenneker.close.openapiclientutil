@@ -30,7 +30,7 @@ public static class CloseOpenApiClientUtilRegistrar
     /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddCloseOpenApiClientUtilAsScoped(this IServiceCollection services)
     {
-        services.AddCloseOpenApiHttpClientAsSingleton()
+        services.AddCloseOpenApiHttpClientAsScoped()
                 .TryAddScoped<ICloseOpenApiClientUtil, CloseOpenApiClientUtil>();
 
         return services;

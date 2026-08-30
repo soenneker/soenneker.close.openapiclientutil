@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -17,27 +18,33 @@ namespace Soenneker.Close.OpenApiClientUtil;
 /// <inheritdoc cref="ICloseOpenApiClientUtil"/>
 public sealed class CloseOpenApiClientUtil : ICloseOpenApiClientUtil
 {
-    private readonly AsyncSingleton<CloseOpenApiClient> _client;
+    private readonly AsyncSingleton<ClientState> _client;
 
     public CloseOpenApiClientUtil(ICloseOpenApiHttpClient httpClientUtil, IConfiguration configuration)
     {
-        _client = new AsyncSingleton<CloseOpenApiClient>(async token =>
+        _client = new AsyncSingleton<ClientState>(async token =>
         {
             HttpClient httpClient = await httpClientUtil.Get(token).NoSync();
 
             var apiKey = configuration.GetValueStrict<string>("Close:ApiKey");
-            string authHeaderValueTemplate = configuration["Close:AuthHeaderValueTemplate"] ?? "Bearer {token}";
-            string authHeaderValue = authHeaderValueTemplate.Replace("{token}", apiKey, StringComparison.Ordinal);
+            string authHeaderName = configuration["Close:AuthHeaderName"] ?? "Authorization";
+            string? authHeaderValueTemplate = configuration["Close:AuthHeaderValueTemplate"];
+            string authHeaderValue = authHeaderValueTemplate is null
+                ? $"Basic {Convert.ToBase64String(Encoding.UTF8.GetBytes($"{apiKey}:"))}"
+                : authHeaderValueTemplate.Replace("{token}", apiKey, StringComparison.Ordinal);
 
-            var requestAdapter = new HttpClientRequestAdapter(new GenericAuthenticationProvider(headerValue: authHeaderValue), httpClient: httpClient);
+            var requestAdapter = new HttpClientRequestAdapter(
+                new GenericAuthenticationProvider(headerName: authHeaderName, headerValue: authHeaderValue),
+                httpClient: httpClient);
 
-            return new CloseOpenApiClient(requestAdapter);
+            return new ClientState(new CloseOpenApiClient(requestAdapter), requestAdapter);
         });
     }
 
-    public ValueTask<CloseOpenApiClient> Get(CancellationToken cancellationToken = default)
+    public async ValueTask<CloseOpenApiClient> Get(CancellationToken cancellationToken = default)
     {
-        return _client.Get(cancellationToken);
+        ClientState state = await _client.Get(cancellationToken).NoSync();
+        return state.Client;
     }
 
     public void Dispose()
@@ -48,5 +55,23 @@ public sealed class CloseOpenApiClientUtil : ICloseOpenApiClientUtil
     public ValueTask DisposeAsync()
     {
         return _client.DisposeAsync();
+    }
+
+    private sealed class ClientState : IDisposable
+    {
+        private readonly HttpClientRequestAdapter _requestAdapter;
+
+        public CloseOpenApiClient Client { get; }
+
+        public ClientState(CloseOpenApiClient client, HttpClientRequestAdapter requestAdapter)
+        {
+            Client = client;
+            _requestAdapter = requestAdapter;
+        }
+
+        public void Dispose()
+        {
+            _requestAdapter.Dispose();
+        }
     }
 }
