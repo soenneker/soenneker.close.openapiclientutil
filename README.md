@@ -39,7 +39,7 @@ using Soenneker.Close.OpenApiClientUtil.Registrars;
 services.AddCloseOpenApiClientUtilAsSingleton();
 ```
 
-Use `AddCloseOpenApiClientUtilAsScoped()` when each dependency-injection scope should own an isolated generated client, request adapter, and HTTP-client cache entry.
+Use `AddCloseOpenApiClientUtilAsScoped()` when each dependency-injection scope should own its generated client and request adapter while sharing the singleton HTTP provider.
 
 ## Usage
 
@@ -78,7 +78,7 @@ Other root request builders include `Lead`, `Contact`, `Opportunity`, `Activity`
 - The first `Get` creates the HTTP client, Kiota request adapter, and generated client. Later calls on the same utility return that client.
 - Configuration and credentials are captured during first initialization. Recreate the owning scope or application instance after rotating them.
 - The token passed to `Get` cancels initialization only. Pass a cancellation token to each generated endpoint call.
-- Let dependency injection dispose `ICloseOpenApiClientUtil`. Disposal releases its request adapter and scoped HTTP-client entry.
+- Let dependency injection dispose `ICloseOpenApiClientUtil`. Disposal releases its request adapter; the singleton HTTP provider and cached `HttpClient` remain available until application shutdown.
 - Generated endpoint methods may return `null` when the schema permits an empty response.
 - Service failures are surfaced through generated error models or Kiota exceptions according to each endpoint's schema mapping.
 - Request builders and models can change when the generated-client package is refreshed from Close's OpenAPI description.
