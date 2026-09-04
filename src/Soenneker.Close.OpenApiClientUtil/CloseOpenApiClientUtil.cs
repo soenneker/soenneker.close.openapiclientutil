@@ -15,6 +15,7 @@ using Soenneker.Utils.AsyncSingleton;
 
 namespace Soenneker.Close.OpenApiClientUtil;
 
+/// <inheritdoc cref="ICloseOpenApiClientUtil" />
 public sealed class CloseOpenApiClientUtil : ICloseOpenApiClientUtil
 {
     private readonly AsyncSingleton<ClientState> _client;
