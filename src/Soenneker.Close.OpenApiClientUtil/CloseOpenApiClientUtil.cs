@@ -26,7 +26,7 @@ public sealed class CloseOpenApiClientUtil : ICloseOpenApiClientUtil
         {
             HttpClient httpClient = await httpClientUtil.Get(token).NoSync();
 
-            var apiKey = configuration.GetValueStrict<string>("Close:ApiKey");
+            var apiKey = configuration.GetStringStrict("Close:ApiKey");
             string authHeaderName = configuration["Close:AuthHeaderName"] ?? "Authorization";
             string? authHeaderValueTemplate = configuration["Close:AuthHeaderValueTemplate"];
             string authHeaderValue = authHeaderValueTemplate is null
